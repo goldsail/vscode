@@ -180,7 +180,7 @@ export class ExtensionHostProcessWorker implements IExtensionHostStarter {
 
 				// Trace the extension host behavior
 				let traceOutput = '/tmp/vscode_trace.log';
-				let filter = 'trace=creat,open,openat,read,write,close';
+				let filter = 'trace=creat,open,openat';
 				let command = `strace -p ${this._extensionHostProcess.pid} -e ${filter} -f -o ${traceOutput}`;
 				console.log('[DEBUG] exec: ', command);
 				exec(command);
