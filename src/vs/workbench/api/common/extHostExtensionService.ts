@@ -34,6 +34,7 @@ import { IExtHostRpcService } from 'vs/workbench/api/common/extHostRpcService';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
 import { IExtHostTunnelService } from 'vs/workbench/api/common/extHostTunnelService';
 import { IExtHostTerminalService } from 'vs/workbench/api/common/extHostTerminalService';
+import { NodeVM } from 'vm2';
 
 interface ITestRunner {
 	/** Old test runner API, as exported from `vscode/lib/testrunner` */
@@ -348,6 +349,7 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 			this._loadCommonJSModule<IExtensionModule>(joinPath(extensionDescription.extensionLocation, extensionDescription.main), activationTimesBuilder),
 			this._loadExtensionContext(extensionDescription)
 		]).then(values => {
+			console.error('Calling activate: ', extensionDescription.identifier.value, typeof values[0]);
 			return AbstractExtHostExtensionService._callActivate(this._logService, extensionDescription.identifier, values[0], values[1], activationTimesBuilder);
 		});
 	}
@@ -402,6 +404,12 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 				activationTimesBuilder.activateCallStart();
 				logService.trace(`ExtensionService#_callActivateOptional ${extensionId.value}`);
 				const scope = typeof global === 'object' ? global : self; // `global` is nodejs while `self` is for workers
+
+				// console.error('Launching extension: ', extensionId.value );
+				// const vm = new NodeVM({
+				// 	sandbox: {extensionModule, scope, context}
+				// });
+				// const activateResult: Promise<IExtensionAPI> = vm.run('extensionModule.activate.apply(scope, [context])');
 				const activateResult: Promise<IExtensionAPI> = extensionModule.activate.apply(scope, [context]);
 				activationTimesBuilder.activateCallStop();
 
@@ -415,6 +423,7 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 			}
 		} else {
 			// No activate found => the module is the extension's exports
+			console.error('No activate found: ', extensionId.value);
 			return Promise.resolve<IExtensionAPI>(extensionModule);
 		}
 	}

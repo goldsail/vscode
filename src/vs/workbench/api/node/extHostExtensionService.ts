@@ -13,6 +13,7 @@ import { ExtHostDownloadService } from 'vs/workbench/api/node/extHostDownloadSer
 import { CLIServer } from 'vs/workbench/api/node/extHostCLIServer';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
+import {NodeVM} from 'vm2';
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
 
@@ -85,7 +86,21 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		this._logService.info(`ExtensionService#loadCommonJSModule ${module.toString(true)}`);
 		this._logService.flush();
 		try {
-			r = require.__$__nodeRequire<T>(module.fsPath);
+			console.error('Loading extension: ', module.fsPath);
+			let dlad = () => {
+				return require.__$__nodeRequire<T>(module.fsPath);
+			};
+
+			const vm = new NodeVM({
+				sourceExtensions: ['js', 'ts'],
+				sandbox: {dlad},
+				require: true,
+				wrapper: 'none'
+			});
+
+			r = <T>vm.run('dlad();');
+
+			// r = require.__$__nodeRequire<T>(module.fsPath);
 		} catch (e) {
 			return Promise.reject(e);
 		} finally {
