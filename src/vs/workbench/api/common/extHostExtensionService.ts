@@ -405,11 +405,6 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 				logService.trace(`ExtensionService#_callActivateOptional ${extensionId.value}`);
 				const scope = typeof global === 'object' ? global : self; // `global` is nodejs while `self` is for workers
 
-				// console.error('Launching extension: ', extensionId.value );
-				// const vm = new NodeVM({
-				// 	sandbox: {extensionModule, scope, context}
-				// });
-				// const activateResult: Promise<IExtensionAPI> = vm.run('extensionModule.activate.apply(scope, [context])');
 				const activateResult: Promise<IExtensionAPI> = extensionModule.activate.apply(scope, [context]);
 				activationTimesBuilder.activateCallStop();
 
