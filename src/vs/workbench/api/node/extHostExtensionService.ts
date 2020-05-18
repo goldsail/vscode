@@ -92,13 +92,12 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 			};
 
 			const vm = new NodeVM({
-				sourceExtensions: ['js', 'ts'],
+				sourceExtensions: ['js'],
 				sandbox: {dlad},
-				require: true,
 				wrapper: 'none'
 			});
 
-			r = <T>vm.run('dlad();');
+			r = <T>vm.run('return dlad();');
 
 			// r = require.__$__nodeRequire<T>(module.fsPath);
 		} catch (e) {
