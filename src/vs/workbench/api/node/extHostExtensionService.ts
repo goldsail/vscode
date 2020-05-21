@@ -13,8 +13,8 @@ import { ExtHostDownloadService } from 'vs/workbench/api/node/extHostDownloadSer
 import { CLIServer } from 'vs/workbench/api/node/extHostCLIServer';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
-import {NodeVM, VMScript} from 'vm2';
-import * as fs from 'fs';
+// import { NodeVM, VMScript } from 'vm2';
+// import { readFileSync } from 'fs';
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
 
@@ -87,18 +87,20 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		this._logService.info(`ExtensionService#loadCommonJSModule ${module.toString(true)}`);
 		this._logService.flush();
 		try {
-			let jsPath = module.fsPath;
-			if (!module.fsPath.endsWith('.js')) {
-				jsPath += '.js';
-			}
-			console.error('Loading extension: ', jsPath);
+			console.log(JSON.stringify(module, undefined, 2));
+			r = require.__$__nodeRequire<T>(module.fsPath);
+			// let jsPath = module.fsPath;
+			// if (!module.fsPath.endsWith('.js')) {
+			// 	jsPath += '.js';
+			// }
+			// console.error('Loading extension: ', jsPath);
 
-			let resolve = (moduleName: String, parentDirName: String) => {
-				return jsPath.split('/out')[0];
-			};
+			// let resolve = (moduleName: String, parentDirName: String) => {
+			// 	return jsPath.split('/out')[0];
+			// };
 
-			const script = new VMScript(fs.readFileSync(jsPath,{encoding:'utf8', flag:'r'}));
-			r = <T>new NodeVM({require:{external: true, builtin: ['*'], resolve: resolve}}).run(script);
+			// const script = new VMScript(fs.readFileSync(jsPath,{encoding:'utf8', flag:'r'}));
+			// r = <T>new NodeVM({require:{external: true, builtin: ['*'], resolve: resolve}}).run(script);
 		} catch (e) {
 			return Promise.reject(e);
 		} finally {

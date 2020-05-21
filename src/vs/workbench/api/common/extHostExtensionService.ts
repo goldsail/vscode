@@ -34,7 +34,10 @@ import { IExtHostRpcService } from 'vs/workbench/api/common/extHostRpcService';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
 import { IExtHostTunnelService } from 'vs/workbench/api/common/extHostTunnelService';
 import { IExtHostTerminalService } from 'vs/workbench/api/common/extHostTerminalService';
+// eslint-disable-next-line code-import-patterns
 import { NodeVM } from 'vm2';
+// import * as vmFs from 'fs';
+// import * as vmPath from 'path';
 
 interface ITestRunner {
 	/** Old test runner API, as exported from `vscode/lib/testrunner` */
@@ -349,7 +352,7 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 			this._loadCommonJSModule<IExtensionModule>(joinPath(extensionDescription.extensionLocation, extensionDescription.main), activationTimesBuilder),
 			this._loadExtensionContext(extensionDescription)
 		]).then(values => {
-			console.error('Calling activate: ', extensionDescription.identifier.value, typeof values[0]);
+			// console.error('Calling activate: ', extensionDescription.identifier.value, typeof values[0]);
 			return AbstractExtHostExtensionService._callActivate(this._logService, extensionDescription.identifier, values[0], values[1], activationTimesBuilder);
 		});
 	}
@@ -405,7 +408,29 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 				logService.trace(`ExtensionService#_callActivateOptional ${extensionId.value}`);
 				const scope = typeof global === 'object' ? global : self; // `global` is nodejs while `self` is for workers
 
-				const activateResult: Promise<IExtensionAPI> = extensionModule.activate.apply(scope, [context]);
+				const myExtensionIdVal = 'rickzengjunhao.fstest';
+				let activateResult: Promise<IExtensionAPI>;
+				if (extensionId.value.includes(myExtensionIdVal)) {
+					console.log('My extension detected, should activate in sandbox');
+					const vm = new NodeVM(
+						{
+							sandbox: {
+								// vscode: vscode,
+								// fs : vmFs,
+								// path : vmPath,
+								scope: scope,
+								context: context,
+								extensionModule: {
+									activate: extensionModule.activate
+								}
+							}
+						}
+					);
+					// Run the activate function in sandbox
+					activateResult = vm.run(`extensionModule.activate.apply(scope, [context])`);
+				} else {
+					activateResult = extensionModule.activate.apply(scope, [context]);
+				}
 				activationTimesBuilder.activateCallStop();
 
 				activationTimesBuilder.activateResolveStart();
@@ -418,7 +443,7 @@ export abstract class AbstractExtHostExtensionService implements ExtHostExtensio
 			}
 		} else {
 			// No activate found => the module is the extension's exports
-			console.error('No activate found: ', extensionId.value);
+			// console.error('No activate found: ', extensionId.value);
 			return Promise.resolve<IExtensionAPI>(extensionModule);
 		}
 	}
