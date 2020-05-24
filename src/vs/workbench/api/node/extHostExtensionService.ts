@@ -97,14 +97,17 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 				return jsPath.split('/out')[0];
 			};
 
-			const script = fs.readFileSync(jsPath,{encoding:'utf8', flag:'r'});
+			let script = fs.readFileSync(jsPath, {encoding:'utf8', flag:'r'});
+			script = script.replace('const vscode = require("vscode");', '// const vscode = require("vscode");');
+
+			let vscode = require.__$__nodeRequire('vscode');
 			let options: NodeVMOptions = {
+				sandbox: {vscode},
 				require: {
 					external: {
 						modules: ['*'],
 						transitive: false
 					},
-					import: ['vscode'],
 					builtin: ['*'],
 					resolve: resolve
 				}
