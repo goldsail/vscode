@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
+console.error('At the beginning of the extension');
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
 import { createServer, Server } from 'net';
@@ -31,8 +31,9 @@ const enum State {
 // on activation this feature is always disabled...
 let currentState = Promise.resolve({ state: State.Disabled, transitionData: null as unknown });
 let statusItem: vscode.StatusBarItem | undefined; // and there is no status bar item
-
+console.error('Outside activate: ', typeof vscode.commands.registerCommand);
 export function activate(context: vscode.ExtensionContext): void {
+	console.error('Inside activate: ', typeof vscode.commands);
 	context.subscriptions.push(vscode.commands.registerCommand(TOGGLE_COMMAND, toggleAutoAttachSetting));
 
 	// settings that can result in the "state" being changed--on/off/disable or useV3 toggles
@@ -251,3 +252,4 @@ async function getIpcAddress(context: vscode.ExtensionContext) {
 	await context.workspaceState.update(JS_DEBUG_IPC_KEY, { ipcAddress, jsDebugPath });
 	return ipcAddress;
 }
+console.error('Done parsing extension');

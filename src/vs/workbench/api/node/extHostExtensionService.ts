@@ -13,7 +13,7 @@ import { ExtHostDownloadService } from 'vs/workbench/api/node/extHostDownloadSer
 import { CLIServer } from 'vs/workbench/api/node/extHostCLIServer';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
-import {NodeVM, VMScript} from 'vm2';
+import {NodeVM, VMScript, NodeVMOptions} from 'vm2';
 import * as fs from 'fs';
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
@@ -93,13 +93,25 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 			}
 			console.error('Loading extension: ', jsPath);
 
-			let resolve = (moduleName: String, parentDirName: String) => {
+			let resolve = (moduleName: string, parentDirName: string) => {
 				return jsPath.split('/out')[0];
 			};
 
-			const script = new VMScript(fs.readFileSync(jsPath,{encoding:'utf8', flag:'r'}));
-			r = <T>new NodeVM({require:{external: true, builtin: ['*'], resolve: resolve}}).run(script);
+			const script = fs.readFileSync(jsPath,{encoding:'utf8', flag:'r'});
+			let options: NodeVMOptions = {
+				require: {
+					external: {
+						modules: ['*'],
+						transitive: false
+					},
+					import: ['vscode'],
+					builtin: ['*'],
+					resolve: resolve
+				}
+			};
+			r = <T>new NodeVM(options).run(script, jsPath);
 		} catch (e) {
+			console.error(e);
 			return Promise.reject(e);
 		} finally {
 			activationTimesBuilder.codeLoadingStop();
