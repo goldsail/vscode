@@ -13,8 +13,8 @@ import { ExtHostDownloadService } from 'vs/workbench/api/node/extHostDownloadSer
 import { CLIServer } from 'vs/workbench/api/node/extHostCLIServer';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
-// import { NodeVM, VMScript } from 'vm2';
-// import { readFileSync } from 'fs';
+import { NodeVM, NodeVMOptions } from 'vm2';
+import { readFileSync } from 'fs';
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
 
@@ -88,19 +88,37 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		this._logService.flush();
 		try {
 			console.log(JSON.stringify(module, undefined, 2));
-			r = require.__$__nodeRequire<T>(module.fsPath);
-			// let jsPath = module.fsPath;
-			// if (!module.fsPath.endsWith('.js')) {
-			// 	jsPath += '.js';
-			// }
-			// console.error('Loading extension: ', jsPath);
-
-			// let resolve = (moduleName: String, parentDirName: String) => {
-			// 	return jsPath.split('/out')[0];
-			// };
-
-			// const script = new VMScript(fs.readFileSync(jsPath,{encoding:'utf8', flag:'r'}));
-			// r = <T>new NodeVM({require:{external: true, builtin: ['*'], resolve: resolve}}).run(script);
+			if (module.fsPath.includes('rickzengjunhao.fstest')) {
+				let script = readFileSync(module.fsPath, { encoding: 'utf8', flag: 'r' })
+					.replace('const vscode = require("vscode")', '');
+				let options: NodeVMOptions = {
+					sandbox: { vscode: require.__$__nodeRequire<T>('vscode') },
+					require: {
+						external: {
+							modules: ['*'],
+							transitive: false
+						},
+						builtin: ['*']
+					}
+				};
+				r = <T>new NodeVM(options).run(script, module.fsPath);
+			} else {
+				r = require.__$__nodeRequire<T>(module.fsPath);
+			}
+			// let jsPath = module.fsPath.endsWith('.js') ? module.fsPath : module.fsPath + '.js';
+			// let script = readFileSync(jsPath, {encoding:'utf8', flag:'r'})
+			// 	             .replace('const vscode = require("vscode")', '');
+			// 	let options: NodeVMOptions = {
+			// 		sandbox: { vscode : require.__$__nodeRequire<T>('vscode') },
+			// 		require: {
+			// 			external: {
+			// 				modules: ['*'],
+			// 				transitive: false
+			// 			},
+			// 			builtin: ['*']
+			// 		}
+			// 	};
+			// 	r = <T>new NodeVM(options).run(script, jsPath);
 		} catch (e) {
 			return Promise.reject(e);
 		} finally {
