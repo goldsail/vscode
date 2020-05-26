@@ -92,7 +92,7 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 			const policy: { [key: string]: any } = {
 				'rickzengjunhao.fstest': {
 					read: true,
-					write: false
+					write: true
 				}
 			};
 
@@ -115,13 +115,14 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 					require: {
 						external: {
 							modules: ['*'],
-							transitive: true
+							transitive: false
 						},
 						builtin: ['path'], // no 'fs' included
 						mock: {
 							vscode: require.__$__nodeRequire<T>('vscode'),
 							fs: fs_
-						}
+						},
+						context: 'sandbox'
 					}
 				};
 				r = <T>new NodeVM(options).run(script, module.fsPath);
