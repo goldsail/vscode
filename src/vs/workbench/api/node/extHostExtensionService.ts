@@ -14,7 +14,7 @@ import { CLIServer } from 'vs/workbench/api/node/extHostCLIServer';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import { NodeVM, NodeVMOptions } from 'vm2';
-import { readFileSync } from 'fs';
+import * as fs from 'fs';
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
 
@@ -88,37 +88,47 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		this._logService.flush();
 		try {
 			console.log(JSON.stringify(module, undefined, 2));
-			if (module.fsPath.includes('rickzengjunhao.fstest')) {
-				let script = readFileSync(module.fsPath, { encoding: 'utf8', flag: 'r' })
-					.replace('const vscode = require("vscode")', '');
+
+			const policy: { [key: string]: any } = {
+				'rickzengjunhao.fstest': {
+					read: true,
+					write: false
+				}
+			};
+
+			let extensionNameInPolicy: string = '';
+			for (const extensionName in policy) {
+				if (module.path.includes(extensionName)) {
+					extensionNameInPolicy = extensionName;
+					break;
+				}
+			}
+
+			if (extensionNameInPolicy) {
+				let jsPath = module.fsPath.endsWith('.js') ? module.fsPath : module.fsPath + '.js';
+				let script = fs.readFileSync(jsPath, { encoding: 'utf8', flag: 'r' });
+				let fs_ = {
+					readFile: policy[extensionNameInPolicy].read ? fs.readFile : undefined,
+					writeFileSync: policy[extensionNameInPolicy].write ? fs.writeFileSync : undefined
+				};
 				let options: NodeVMOptions = {
-					sandbox: { vscode: require.__$__nodeRequire<T>('vscode') },
 					require: {
 						external: {
 							modules: ['*'],
-							transitive: false
+							transitive: true
 						},
-						builtin: ['*']
+						builtin: ['path'], // no 'fs' included
+						mock: {
+							vscode: require.__$__nodeRequire<T>('vscode'),
+							fs: fs_
+						}
 					}
 				};
 				r = <T>new NodeVM(options).run(script, module.fsPath);
 			} else {
 				r = require.__$__nodeRequire<T>(module.fsPath);
 			}
-			// let jsPath = module.fsPath.endsWith('.js') ? module.fsPath : module.fsPath + '.js';
-			// let script = readFileSync(jsPath, {encoding:'utf8', flag:'r'})
-			// 	             .replace('const vscode = require("vscode")', '');
-			// 	let options: NodeVMOptions = {
-			// 		sandbox: { vscode : require.__$__nodeRequire<T>('vscode') },
-			// 		require: {
-			// 			external: {
-			// 				modules: ['*'],
-			// 				transitive: false
-			// 			},
-			// 			builtin: ['*']
-			// 		}
-			// 	};
-			// 	r = <T>new NodeVM(options).run(script, jsPath);
+
 		} catch (e) {
 			return Promise.reject(e);
 		} finally {
