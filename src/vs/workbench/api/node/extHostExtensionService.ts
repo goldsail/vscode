@@ -13,8 +13,10 @@ import { ExtHostDownloadService } from 'vs/workbench/api/node/extHostDownloadSer
 import { CLIServer } from 'vs/workbench/api/node/extHostCLIServer';
 import { URI } from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
-import {NodeVM, VMScript, NodeVMOptions} from 'vm2';
+import {NodeVM, NodeVMOptions} from 'vm2';
 import * as fs from 'fs';
+import * as https from 'https';
+import * as vscode from 'vscode';
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
 
@@ -90,7 +92,7 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 			let jsPath = module.fsPath;
 			if (!module.fsPath.endsWith('.js')) {
 				jsPath += '.js';
-			}	
+			}
 
 			let resolve = (moduleName: string, parentDirName: string) => {
 				return jsPath.split('/out')[0];
@@ -99,18 +101,111 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 			let script = fs.readFileSync(jsPath, {encoding:'utf8', flag:'r'});
 			let vscode = require.__$__nodeRequire('vscode');
 
+			let httpsMock = {
+				createServer() {throw Error('Extensions are not allowed to create servers');},
+				get(options, callback) {
+					let message = "";
+					switch (Object.prototype.toString.call(options).slice(8, -1)) {
+						case "String":
+							message = "Attempting to connect to " + options + ".  Proceed?";
+							break;
+						case "URL":
+							message = "Attempting to connect to " + options.URL + ".  Proceed?";
+							break;
+						case "Object":
+							message = "Attempting to connect to " + options.path + ".  Proceed?";
+
+					};
+
+					vscode.window
+						.showInformationMessage(message, ...['Allow', 'Reject'])
+						.then(result => {
+					        	if (result === 'Reject') {
+								throw Error("User not okay with the call");
+							} else {
+								https.get(options, callback);
+							}
+						});
+				},
+				get(url, options, callback) {
+					let message = "";
+					switch(Object.prototype.toString.call(url).slice(8, -1) {
+						case "String":
+							message = "Attempting to connect to " + url + ".  Proceed?";
+							break;
+						case "URL":
+							message = "Attempting to connect to " url.URL + ".  Proceed?";
+					}
+
+					vscode.window
+						.showInformationMessage(message, ...['Allow', 'Reject'])
+						.then(result => {
+							if (result === 'Reject') {
+								throw Error("User not okay with the call");
+							} else {
+								https.get(url, options, callback);
+							}
+						});
+				},
+				request(options, callback) {
+					let message = "";
+					switch (Object.prototype.toString.call(options).slice(8, -1) {
+						case "String":
+							message = "Attempting to connect to " + options + ".  Proceed?";
+							break;
+						case "URL":
+							message = "Attempting to connect to " + options.URL + ".  Proceed?";
+							break;
+						case "Object":
+							message = "Attempting to connect to " + options.path + ".  Proceed?";
+
+					}
+
+					vscode.window
+						.showInformationMessage(message, ...['Allow', 'Reject'])
+						.then(result => {
+					        	if (result === 'Reject') {
+								throw Error("User not okay with the call");
+							} else {
+								https.get(options, callback);
+							}
+						});
+				},
+				request(url, options, callback) {
+					let message = "";
+					switch(Object.prototype.toString.call(url).slice(8, -1) {
+						case "String":
+							message = "Attempting to connect to " + url + ".  Proceed?";
+							break;
+						case "URL":
+							message = "Attempting to connect to " url.URL + ".  Proceed?";
+					}
+
+					vscode.window
+						.showInformationMessage(message, ...['Allow', 'Reject'])
+						.then(result => {
+							if (result === 'Reject') {
+								throw Error("User not okay with the call");
+							} else {
+								https.get(url, options, callback);
+							}
+						});
+				}
+			}
+
 			let options: NodeVMOptions = {
 				sandbox: {vscode},
 				require: {
 					context: 'sandbox',
 					mock: {
+						https: httpsMock,
 						vscode: vscode
 					},
 					external: {
 						modules: ['vscode', 'vscode-nls'],
 						transitive: false
 					},
-					builtin: ['assert', 'buffer', 'events'],
+					builtin: ['assert', 'buffer', 'crypto', 'events', 'https', 'path', 'timers', 'tls', 'util', 'vm'],
 					// builtin: ['*'],
 					resolve: resolve
 				}
