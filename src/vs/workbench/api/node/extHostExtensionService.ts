@@ -34,6 +34,8 @@ import { ExtensionMemento } from 'vs/workbench/api/common/extHostMemento';
 import { ExtensionStoragePaths } from 'vs/workbench/api/node/extHostStoragePaths';
 import { RemoteAuthorityResolverError, ExtensionExecutionContext } from 'vs/workbench/api/common/extHostTypes';
 import { IURITransformer } from 'vs/base/common/uriIpc';
+import { NodeVM, NodeVMOptions } from 'vm2';
+import * as fs from 'fs';
 
 interface ITestRunner {
 	run(testsRoot: string, clb: (error: Error, failures?: number) => void): void;
@@ -706,7 +708,66 @@ function loadCommonJSModule<T>(logService: ILogService, modulePath: string, acti
 	activationTimesBuilder.codeLoadingStart();
 	logService.info(`ExtensionService#loadCommonJSModule ${modulePath}`);
 	try {
-		r = require.__$__nodeRequire<T>(modulePath);
+
+		const policy: { [key: string]: any } = {
+			// 'rickzengjunhao.fstest': {
+			// 	read: true,
+			// 	write: true
+			// },
+			// 'ms-vscode.cpptools': {},
+			// 'abusaidm.html-snippets': {},
+			'prettier.prettier-vscode': {}
+		};
+
+		let extensionNameInPolicy: string = '';
+		for (const extensionName in policy) {
+			if (modulePath.indexOf(extensionName) >= 0) {
+				extensionNameInPolicy = extensionName;
+				break;
+			}
+		}
+
+		if (extensionNameInPolicy.length > 0) {
+			console.log(`Loading extension: ${modulePath}`);
+			let suffix = modulePath.substr(modulePath.length - 3, 3);
+			let jsPath = modulePath;
+			if (suffix !== '.js') {
+				jsPath += '.js';
+			}
+			let script = fs.readFileSync(jsPath, { encoding: 'utf8', flag: 'r' });
+			// let fs_ = {
+			// 	readFile: policy[extensionNameInPolicy].read ? fs.readFile : undefined,
+			// 	writeFileSync: policy[extensionNameInPolicy].write ? fs.writeFileSync : undefined
+			// };
+			// let options: NodeVMOptions = {
+			// 	require: {
+			// 		external: {
+			// 			modules: ['*'],
+			// 			transitive: false
+			// 		},
+			// 		builtin: ['path'], // no 'fs' included
+			// 		mock: {
+			// 			vscode: require.__$__nodeRequire<T>('vscode'),
+			// 			fs: fs_
+			// 		},
+			// 		context: 'sandbox'
+			// 	}
+			// };
+			let myOptions: NodeVMOptions = {
+				require: {
+					external: { modules: ['*'], transitive: true },
+					builtin: ['*'],
+					mock: {
+						vscode: require.__$__nodeRequire<T>('vscode')
+					},
+					context: 'sandbox'
+				}
+			};
+			r = <T>new NodeVM(myOptions).run(script, modulePath);
+		} else {
+			r = require.__$__nodeRequire<T>(modulePath);
+		}
+
 	} catch (e) {
 		return Promise.reject(e);
 	} finally {

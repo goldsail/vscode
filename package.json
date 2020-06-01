@@ -46,6 +46,7 @@
     "spdlog": "0.8.1",
     "sudo-prompt": "8.2.0",
     "v8-inspect-profiler": "^0.0.20",
+    "vm2": "^3.9.2",
     "vscode-chokidar": "1.6.5",
     "vscode-debugprotocol": "1.35.0",
     "vscode-nsfw": "1.1.1",
