@@ -710,12 +710,6 @@ function loadCommonJSModule<T>(logService: ILogService, modulePath: string, acti
 	try {
 
 		const policy: { [key: string]: any } = {
-			// 'rickzengjunhao.fstest': {
-			// 	read: true,
-			// 	write: true
-			// },
-			// 'ms-vscode.cpptools': {},
-			// 'abusaidm.html-snippets': {},
 			'prettier.prettier-vscode': {}
 		};
 
@@ -735,35 +729,18 @@ function loadCommonJSModule<T>(logService: ILogService, modulePath: string, acti
 				jsPath += '.js';
 			}
 			let script = fs.readFileSync(jsPath, { encoding: 'utf8', flag: 'r' });
-			// let fs_ = {
-			// 	readFile: policy[extensionNameInPolicy].read ? fs.readFile : undefined,
-			// 	writeFileSync: policy[extensionNameInPolicy].write ? fs.writeFileSync : undefined
-			// };
-			// let options: NodeVMOptions = {
-			// 	require: {
-			// 		external: {
-			// 			modules: ['*'],
-			// 			transitive: false
-			// 		},
-			// 		builtin: ['path'], // no 'fs' included
-			// 		mock: {
-			// 			vscode: require.__$__nodeRequire<T>('vscode'),
-			// 			fs: fs_
-			// 		},
-			// 		context: 'sandbox'
-			// 	}
-			// };
-			let myOptions: NodeVMOptions = {
+			let options: NodeVMOptions = {
 				require: {
 					external: { modules: ['*'], transitive: true },
 					builtin: ['*'],
 					mock: {
-						vscode: require.__$__nodeRequire<T>('vscode')
+						vscode: require.__$__nodeRequire<T>('vscode'),
+						fs: { ...fs, ...{ readFile: fs.readFile } }
 					},
 					context: 'sandbox'
 				}
 			};
-			r = <T>new NodeVM(myOptions).run(script, modulePath);
+			r = <T>new NodeVM(options).run(script, modulePath);
 		} else {
 			r = require.__$__nodeRequire<T>(modulePath);
 		}
