@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 
 interface AccessPolicy {
-	r: string[];
-	w: string[];
+	rpath: string[];
+	rname: string[];
+	wpath: string[];
+	wname: string[];
 }
 
 /**
@@ -14,10 +16,42 @@ interface AccessPolicy {
  */
 // TODO: now path can only be string
 function checkAccessibility(policy: AccessPolicy, path: string, mode: string) {
-	const accessiblePaths: string[] = policy[mode];
 	// if (! accessiblePaths.some(parentPath => (fs.realpathSync(path).indexOf(fs.realpathSync(parentPath)) == 0))) {
 	//     throw new Error(`${fs.realpathSync(path)} is inaccessible!`);
 	// }
+	const startWith = (s: string, prefix: string): boolean => {
+		return (prefix.length <= s.length) && (s.substr(0, prefix.length) === prefix);
+	};
+	const realPath = fs.realpathSync(path);
+	const arr = realPath.split('/');
+	const realFile = arr[arr.length - 1];
+	let allow = false;
+	if (mode === 'r') {
+		policy.rpath.forEach( s => {
+			if (startWith(realPath, s)) {
+				allow = true;
+			}
+		});
+		policy.rname.forEach( s => {
+			if (s === realFile) {
+				allow = true;
+			}
+		});
+	} else if (mode === 'w') {
+		policy.wpath.forEach( s => {
+			if (startWith(realPath, s)) {
+				allow = true;
+			}
+		});
+		policy.wname.forEach( s => {
+			if (s === realFile) {
+				allow = true;
+			}
+		});
+	}
+	if (!allow) {
+		throw new Error(`${fs.realpathSync(path)} is inaccessible!`);
+	}
 }
 
 
@@ -25,7 +59,42 @@ function checkAccessibility(policy: AccessPolicy, path: string, mode: string) {
 // and return the access policy
 // TODO
 function resolveAccessPolicy(extensionName: string): AccessPolicy {
-	return { r: ['/'], w: ['/'] };
+	const temp = {
+		"rpath": [
+			"/home/fan/Projects/vscode",
+			"/home/fan/Projects/vscode-test",
+			"/root/.vscode-oss-dev",
+			"/root/.config/code-oss-dev",
+
+			"/lib/x86_64-linux-gnu",
+			"/usr/lib",
+			"/dev/null",
+			"/dev/urandom",
+			"/sys/devices/system/cpu",
+			"/proc/filesystems",
+			"/proc/cpuinfo",
+
+			".git"
+		],
+
+		"rname": [
+			".prettierrc",
+			".prettierrc.json",
+			".prettierrc.yaml",
+			".prettierrc.yml",
+			".prettierrc.js",
+			"prettier.config.js",
+			".prettierrc.toml",
+			"package.json"
+		],
+
+		"wpath": [
+			"/home/fan/Projects/vscode-test"
+		],
+
+		"wname": []
+	};
+	return temp;
 }
 
 
