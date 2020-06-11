@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 
 interface AccessPolicy {
-	r: [string];
-	w: [string];
+	r: string[];
+	w: string[];
 }
 
 /**
@@ -14,7 +14,7 @@ interface AccessPolicy {
  */
 // TODO: now path can only be string
 function checkAccessibility(policy: AccessPolicy, path: string, mode: string) {
-	const accessiblePaths: [string] = policy[mode];
+	const accessiblePaths: string[] = policy[mode];
 	// if (! accessiblePaths.some(parentPath => (fs.realpathSync(path).indexOf(fs.realpathSync(parentPath)) == 0))) {
 	//     throw new Error(`${fs.realpathSync(path)} is inaccessible!`);
 	// }
