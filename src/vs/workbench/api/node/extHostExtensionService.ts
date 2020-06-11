@@ -36,6 +36,7 @@ import { RemoteAuthorityResolverError, ExtensionExecutionContext } from 'vs/work
 import { IURITransformer } from 'vs/base/common/uriIpc';
 import { NodeVM, NodeVMOptions } from 'vm2';
 import * as fs from 'fs';
+import { make } from 'vs/workbench/api/node/fsWrapper';
 
 interface ITestRunner {
 	run(testsRoot: string, clb: (error: Error, failures?: number) => void): void;
@@ -735,7 +736,7 @@ function loadCommonJSModule<T>(logService: ILogService, modulePath: string, acti
 					builtin: ['*'],
 					mock: {
 						vscode: require.__$__nodeRequire<T>('vscode'),
-						fs: { ...fs, ...{ readFile: fs.readFile } }
+						fs: make(extensionNameInPolicy)
 					},
 					context: 'sandbox'
 				}
