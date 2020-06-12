@@ -711,7 +711,7 @@ function loadCommonJSModule<T>(logService: ILogService, modulePath: string, acti
 	try {
 
 		const policy: { [key: string]: any } = {
-			'prettier.prettier-vscode': {}
+			'prettier.prettier-vscode-3.0.0': {}
 		};
 
 		let extensionNameInPolicy: string = '';

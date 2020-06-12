@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { join } from 'path';
 
 interface AccessPolicy {
 	rpath: string[];
@@ -16,41 +17,40 @@ interface AccessPolicy {
  */
 // TODO: now path can only be string
 function checkAccessibility(policy: AccessPolicy, path: string, mode: string) {
-	// if (! accessiblePaths.some(parentPath => (fs.realpathSync(path).indexOf(fs.realpathSync(parentPath)) == 0))) {
-	//     throw new Error(`${fs.realpathSync(path)} is inaccessible!`);
-	// }
 	const startWith = (s: string, prefix: string): boolean => {
 		return (prefix.length <= s.length) && (s.substr(0, prefix.length) === prefix);
 	};
-	const realPath = fs.realpathSync(path);
-	const arr = realPath.split('/');
-	const realFile = arr[arr.length - 1];
-	let allow = false;
-	if (mode === 'r') {
-		policy.rpath.forEach( s => {
-			if (startWith(realPath, s)) {
-				allow = true;
-			}
-		});
-		policy.rname.forEach( s => {
-			if (s === realFile) {
-				allow = true;
-			}
-		});
-	} else if (mode === 'w') {
-		policy.wpath.forEach( s => {
-			if (startWith(realPath, s)) {
-				allow = true;
-			}
-		});
-		policy.wname.forEach( s => {
-			if (s === realFile) {
-				allow = true;
-			}
-		});
-	}
-	if (!allow) {
-		throw new Error(`${fs.realpathSync(path)} is inaccessible!`);
+	if (fs.existsSync(path)) {
+		const realPath = fs.realpathSync(path);
+		const arr = realPath.split('/');
+		const realFile = arr[arr.length - 1];
+		let allow = false;
+		if (mode === 'r') {
+			policy.rpath.forEach(s => {
+				if (startWith(realPath, s)) {
+					allow = true;
+				}
+			});
+			policy.rname.forEach(s => {
+				if (s === realFile) {
+					allow = true;
+				}
+			});
+		} else if (mode === 'w') {
+			policy.wpath.forEach(s => {
+				if (startWith(realPath, s)) {
+					allow = true;
+				}
+			});
+			policy.wname.forEach(s => {
+				if (s === realFile) {
+					allow = true;
+				}
+			});
+		}
+		if (!allow) {
+			throw new Error(`${fs.realpathSync(path)} is inaccessible!`);
+		}
 	}
 }
 
@@ -59,42 +59,8 @@ function checkAccessibility(policy: AccessPolicy, path: string, mode: string) {
 // and return the access policy
 // TODO
 function resolveAccessPolicy(extensionName: string): AccessPolicy {
-	const temp = {
-		"rpath": [
-			"/home/fan/Projects/vscode",
-			"/home/fan/Projects/vscode-test",
-			"/root/.vscode-oss-dev",
-			"/root/.config/code-oss-dev",
-
-			"/lib/x86_64-linux-gnu",
-			"/usr/lib",
-			"/dev/null",
-			"/dev/urandom",
-			"/sys/devices/system/cpu",
-			"/proc/filesystems",
-			"/proc/cpuinfo",
-
-			".git"
-		],
-
-		"rname": [
-			".prettierrc",
-			".prettierrc.json",
-			".prettierrc.yaml",
-			".prettierrc.yml",
-			".prettierrc.js",
-			"prettier.config.js",
-			".prettierrc.toml",
-			"package.json"
-		],
-
-		"wpath": [
-			"/home/fan/Projects/vscode-test"
-		],
-
-		"wname": []
-	};
-	return temp;
+	return JSON.parse(fs.readFileSync(join('/home/jhz/.vscode-oss-dev/extensions', extensionName, 'manifest.json'),
+		{ encoding: 'utf8', flag: 'r' }));
 }
 
 
@@ -110,7 +76,7 @@ const oneFileFuncWrapper = (func: any, policy: AccessPolicy, mode: string) => (f
 const twoPathsFuncWrapper = (func: any, policy: AccessPolicy, _: any) => (p1: string, p2: string, ...args: any) => {
 	checkAccessibility(policy, p1, 'r');
 	checkAccessibility(policy, p2, 'w');
-	func(p1, p2, ...args);
+	return func(p1, p2, ...args);
 };
 
 // TODO: now accepting string flags only
